@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="styles.css">
+	<title>Инвестируй с нейросетью!</title>
+</head>
+<body class="background">	
+	<div class='block-column' style='height: 100%'>
+		<div class='block-inline' id='options' style='height: 10%; border: 5px solid #cacaff; border-radius: 30px;'>
+
+		</div>
+		<div class='block-inline' id='parser' style='height: 10%; border: 5px solid #cacaff; border-radius: 30px; flex-wrap: wrap;'>
+			<div class='main-selection-menu'>Настройки для парсера</div>
+		</div>
+		<div class='block-inline' style='height: 50%'>
+			<div class='block-column' style='width: 45%; height: 100%;'>
+				<div class='bubble speech' id='talk' style='position: relative; z-index: 2; min-height: 20%; min-width: 90%; top: 0px; width: 50%; height: 50%;'></div>
+				<img class='' src='dictor.png' style='position: relative; z-index: 1; bottom: 0px; width: 45%; height: 45%;'>
+			</div>
+			<div class='block-column' style='margin-left: 10%; width: 45%;'>
+				<div id='chartArea' style='display: none; position: relative; width: 100%; height: 100%; text-align: center; font-size: 24px; border: 5px solid #cacaff; border-radius: 30px; font-family: Avenir Next, sans-serif;'>
+
+				</div>
+			</div>
+		</div>
+		<div class='block-inline' id='buttons' style='height: 30%'>
+				<div class='main-selection-menu'>Оцените новость</div>
+		</div>
+	</div>
+	<link rel="preload" href="check.png" as="image">
+	<link rel="preload" href="sync.png" as="image">
+	<link rel="preload" href="cross.png" as="image">
+	<link rel="preload" href="save.png" as="image">
+	<script>
+		//Запрос Да или Нет
+		function tableConfirmation(text, func){
+			let area = document.createElement('div');
+			area.setAttribute('class','area-table-confirmation');
+			area.setAttribute('id','areaTableConfirmation');
+			document.body.appendChild(area);
+
+			let tablet = document.createElement('div');
+			tablet.setAttribute('class','tablet-table-confirmation');
+			tablet.setAttribute('id','tabletTableConfirmation');
+			area.appendChild(tablet);
+
+			let texts = document.createElement('div');
+			texts.setAttribute('class','text-table-confirmation');
+			texts.setAttribute('id','textTableConfirmation');
+			texts.innerText = text;
+			tablet.appendChild(texts);
+
+			let line = document.createElement('div');
+			line.setAttribute('class','block-inline');
+			line.setAttribute('id','textTableConfirmation');
+			tablet.appendChild(line); 
+
+			let yes = document.createElement('div');
+			yes.setAttribute('class','button-table-confirmation');
+			yes.setAttribute('id','yesTableConfirmation');
+			yes.innerText = 'Да';
+			line.appendChild(yes);
+			yes.addEventListener('click',()=>{
+				area.remove();
+				func();
+			});
+
+			let no = document.createElement('div');
+			no.setAttribute('class','button-table-confirmation');
+			no.setAttribute('id','noTableConfirmation');
+			no.innerText = 'Нет';
+			line.appendChild(no); 
+			no.addEventListener('click',()=>{area.remove()});
+		} 
+
+		//Галочка
+		function checkBox(parent, text, value=false, style={}){
+			let label = document.createElement('label');
+			label.setAttribute('class','checkbox-just');
+			parent.appendChild(label);
+			let fontSize = document.defaultView.getComputedStyle(label, null).fontSize;
+
+			let input = document.createElement('input');
+			input.setAttribute('type','checkbox');
+			input.setAttribute('class','checkbox-just');
+			input.setAttribute('id','checkboxJust');
+			input.style.width = fontSize;
+			input.style.height = fontSize;
+			label.appendChild(input);
+		    label.function = (value)=>{};
+
+		    label.addEventListener('click',(e)=>{if(e.target.id=='checkboxJust'){label.function(e.target.checked)}});
+		    label.text = document.createElement('p');
+		    label.text.setAttribute('style','margin: 0px;');
+		    label.appendChild(label.text);
+			label.text.innerHTML = text;
+			Object.keys(style).forEach((s)=>{label.style[s]=style[s]});
+			return label
+		}
+
+		//Меню выбора 
+		function selectionMenu(parent, text, variants, several = false, style={}, mainStyle={}){
+			let main = document.createElement('div');
+			main.setAttribute('class','main-selection-menu');
+			main.innerHTML = text;
+			Object.keys(style).forEach((s)=>{main.style[s]=style[s]});
+			parent.appendChild(main);
+
+			if(several){
+				
+			} else {
+				let select = document.createElement('select');
+				select.setAttribute('class','select-selection-menu');
+				Object.keys(style).forEach((s)=>{select.style[s]=style[s]});
+				main.appendChild(select);
+				select.function = (value)=>{}
+				select.addEventListener('click',()=>{select.function(select.value)});
+
+				variants.forEach((e)=>{
+					let option = document.createElement('option');
+					//option.setAttribute('value',e);
+					option.value = JSON.stringify(e);
+					option.innerHTML = e.date!=undefined?`${e.name} - <span style='font-size: 10px;'>${e.date}</span>`:e.name;
+					select.appendChild(option);
+				});
+				return select
+			};
+		}
+
+		//Слайдер
+		function slider(parent, id, startValue, endValue, currentValue, _class='slider-circle', text='Значение: ', rightValue=false, style={margin:'0px'}){
+			let sliderMenu = document.createElement('div');
+			sliderMenu.setAttribute('class','block-inline');
+			parent.appendChild(sliderMenu);
+			Object.keys(style).forEach((s)=>{sliderMenu.style[s]=style[s]});
+
+			let sliderText = document.createElement('div');
+			sliderText.setAttribute('class','main-selection-menu');
+			sliderText.innerHTML = text;
+			//sliderText.setAttribute('style','width: 30%;');
+			sliderMenu.appendChild(sliderText);
+
+			let sliderLeft = document.createElement('div');
+			sliderLeft.setAttribute('class','main-selection-menu');
+			sliderLeft.innerHTML = currentValue;
+			sliderMenu.appendChild(sliderLeft);
+
+			let sliderCount = document.createElement('input');
+			sliderCount.setAttribute('class','slider-circle');
+			sliderCount.setAttribute('style','width: 60%;');
+			sliderCount.setAttribute('type','range');
+			sliderCount.setAttribute('min',startValue);
+			sliderCount.setAttribute('max',endValue);
+			sliderCount.setAttribute('value',currentValue);
+		    sliderCount.function = (value)=>{};
+			sliderCount.addEventListener('mousemove',()=>{sliderLeft.innerHTML = sliderCount.value; sliderCount.function(sliderCount.value);})
+			sliderMenu.appendChild(sliderCount);
+
+			if(rightValue){
+				let sliderRight = document.createElement('div');
+				sliderRight.setAttribute('class','main-selection-menu');
+				sliderRight.innerHTML = endValue-currentValue;
+				sliderCount.addEventListener('mousemove',()=>{sliderLeft.innerHTML = sliderCount.value; sliderRight.innerHTML = endValue-Number(sliderCount.value);})
+				sliderRight.setAttribute('style','width: 10%;');
+				sliderMenu.appendChild(sliderRight);
+			}
+
+			return sliderCount
+		}
+
+		//Простая кнопка
+		function createButton(parent, id, text, _function, icon=undefined, styleIcon={width:'30px', height:'30px'}, style={}){
+			let button = document.createElement('div');
+			button.setAttribute('id',id)
+			button.setAttribute('class','button-just');
+			button.addEventListener('click',_function); 
+			parent.appendChild(button);
+			Object.keys(style).forEach((s)=>{button.style[s]=style[s]});
+
+			if(icon != undefined){
+				let img = document.createElement('img');
+				img.setAttribute('src',icon);
+				button.appendChild(img);
+		        button.image = img;
+				Object.keys(styleIcon).forEach((s)=>{img.style[s]=styleIcon[s]});
+			}
+
+			let textButton = document.createElement('p');
+			textButton.innerHTML = text;
+			button.appendChild(textButton);
+
+			return button
+		}
+
+		//Ввод с клавиатуры
+		function input(parent, text, _class='input-text-just', style={}, ABC='QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm_@-+=$#<>1234567890'){
+			let main = document.createElement('div');
+			main.setAttribute('class', _class);
+			parent.appendChild(main);
+
+			let label = document.createElement('label');
+			label.setAttribute('class', _class);
+			label.innerHTML = text;
+			main.appendChild(label);
+
+			let input = document.createElement('input');
+			input.setAttribute('class', _class);
+			input.setAttribute('autocomplete','no');
+			main.addEventListener('input',()=>{
+				let result = '';
+				for (let s of input.value){result+=ABC.includes(s)?s:''};
+				input.value = result;
+				main.functionInput();
+		        main.function(result);
+			});
+			main.appendChild(input);
+			main.functionInput = ()=>{};
+		    main.function = (value)=>{};
+			main.input = input;
+
+			Object.keys(style).forEach((s)=>{input.style[s]=style[s]});
+
+			return main
+		}
+
+		//Конструктор сложного выбора
+		function constructorInput(parent, text, data=[], _class, style={}){
+			/*
+			[
+			{text:'',select:{text:'',variants:[{name:'',id:null},{},..]},input:{text:'',ABC:'Aa1$', style:{}},slider:{text:'',''}}
+			]
+			*/
+			let info = '';
+			let main = document.createElement('div');
+			main.style.margin = '5px';
+			main.setAttribute('class','block-inline');
+			main.setAttribute('style','justify-content: center; margin: 2px; background-color: white; width: auto; border-radius: 10px; padding: 5px; border: 2px solid black;');
+			let textMain = document.createElement('div');
+			Object.keys(style).forEach((s)=>{main.style[s]=style[s]});
+			textMain.innerHTML = text;
+			textMain.style.height = 20;
+			textMain.style.maxWidth = 20*text.length;
+			textMain.style.display = 'block';
+			main.appendChild(textMain);
+			parent.appendChild(main);
+			main.expanded = false;
+
+			let selectMain = document.createElement('div');
+			selectMain.setAttribute('class','block-column');
+			selectMain.style.display = 'none';
+			main.appendChild(selectMain);
+
+			main.result = [];
+			data.forEach((e)=>{
+				main.result.push({active: false});
+				let thisObject = main.result[main.result.length-1]; 
+				let box = checkBox(selectMain, e.text,false,{color:'gray'});
+				box.addEventListener('click',(e)=>{thisObject.active = e.target.id=='checkboxJust'?e.target.checked:thisObject.active; box.style.color = thisObject.active?'black':'gray'});
+				Object.keys(e).forEach((key)=>{
+					if(key.includes('select')){
+						let select = selectionMenu(box, e[key].text, e[key].variants, false, {margin: 0, marginLeft:'10px', padding: 0, color: 'inherit'});
+						select.value='...';
+						select.addEventListener('click',()=>{thisObject[key]=JSON.parse(select.value).id});
+					} else if (key.includes('input')){
+						let inpu = input(box, e[key].text, 'input-text-just', e[key].style, e[key].ABC);
+						inpu.style.marginLeft = '10px';
+						inpu.style.color = 'inherit';
+						inpu.input.value = '';
+						inpu.functionInput = ()=>{
+							try {thisObject[key] = Number(inpu.input.value);} catch {thisObject[key] = inpu.input.value}
+						};
+					} else if (key.includes('slider')){
+
+					}
+				});
+			});
+			main.function = ()=>{};
+			let button = createButton(selectMain, '', 'применить', ()=>{main.function(); main.expanded = false; textMain.style.display = 'block'; selectMain.style.display = 'none';}, undefined, {}, {width: 'min-content'})
+
+			textMain.addEventListener('click',(e)=>{
+				if(e.target==textMain || main.expanded == false){main.expanded = true; textMain.style.display = 'none'; selectMain.style.display = 'flex';};
+			});
+
+			return main
+		}
+
+		//Линейный график
+		function drawChart(parent, title, data, config={}, style={}){
+		    config.displayOptionConfig = config.displayOptionConfig==undefined?false:config.displayOptionConfig;
+		    config.displayAxis = config.displayAxis==undefined?false:config.displayAxis;
+		    config.valueOnAxis = config.valueOnAxis==undefined?false:config.valueOnAxis;
+		    config.extremeValueOnAxis = config.extremeValueOnAxis==undefined?false:config.extremeValueOnAxis;
+		    config.valueOnChart = config.valueOnChart==undefined?false:config.valueOnChart;
+		    config.color = config.color==undefined?[]:config.color;
+		    config.shade = config.shade==undefined?'blue':config.shade;
+		    config.lineWidth = config.lineWidth==undefined?5:config.lineWidth;
+		    config.font = config.font==undefined?"bold 42px Arial":config.font;
+
+		    let area = document.createElement('div');
+		    area.setAttribute('class','block-column');
+		    parent.appendChild(area);
+
+		    let head = document.createElement('p');
+		    head.setAttribute('class','input-text-just');
+		    head.innerHTML = title;
+		    area.appendChild(head);
+
+		    if(config.displayOptionConfig){
+		        let options = document.createElement('div');
+		        options.setAttribute('class','block-inline');
+		        options.setAttribute('style','margin: 2px;');
+		        area.appendChild(options);
+
+		        [{id:'displayAxis', name:'Показать оси'},{id:'valueOnAxis', name:'Значения на осях'},{id:'extremeValueOnAxis', name:'Крайние значения на осях'},{id:'valueOnChart', name:'Значения на графике'}].forEach((e)=>{
+		            let box = checkBox(options, e.name, config[e.id], {fontSize:'12px'});
+		            box.function = (value)=>{config[e.id] = value; draw();};
+		        });
+		    }
+
+		    let chart = document.createElement('canvas');
+		    chart.width = 1920;
+		    chart.height = 1080;
+		    area.appendChild(chart);
+
+		    Object.keys(style).forEach((s)=>{area.style[s]=style[s]});
+		    draw();
+		    chart.label = (position, value, text, color=getColor(shade='blue'), font="bold 40px Arial")=>{
+		    	let x = chart.step/2+chart.step*position;
+		    	let y = chart.height*0.8-(value-chart.min)*chart.dif;
+		    	let ctx = chart.getContext('2d');
+		    	ctx.beginPath();
+		    	ctx.strokeStyle = color;
+		    	ctx.fillStyle = color;
+				ctx.font = font;
+				ctx.textAlign = 'center';
+				ctx.textBaseline = 'middle';
+		    	ctx.arc(x, y, 20, 0, 2*Math.PI, false);
+		    	ctx.fillText(text, x, y-30);
+		    	ctx.stroke();
+		    }
+		    return chart
+
+		    function getColor(shade='blue'){
+		        let result = '#';
+		        switch(shade){
+		            case 'red':
+		                result+='ff';
+		                for(let i=0; i<4; i++){result+=['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e'][Math.floor(Math.random() * 15)]}
+		                break
+		            case 'green':
+		                for(let i=0; i<2; i++){result+=['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e'][Math.floor(Math.random() * 15)]}
+		                result+='ff';
+		                for(let i=0; i<2; i++){result+=['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e'][Math.floor(Math.random() * 15)]}
+		                break
+		            case 'blue':
+		                for(let i=0; i<4; i++){result+=['0','1','2','3','4','5','6','7','8','9','a','b','c','d','e'][Math.floor(Math.random() * 15)]}
+		                result+='ff';
+		                break
+		        }
+		        return result
+		    }
+
+		    function draw(){
+		        if(data[0]==undefined){
+		            let maxLength = 0;
+		            let max = 0;
+		            let min = undefined;
+		            let keys = Object.keys(data);
+		            keys.forEach((e)=>{
+		                maxLength=maxLength<data[e].length?data[e].length:maxLength;
+		                max = Math.max.apply(null,data[e])>max?Math.max.apply(null,data[e]):max; chart.max = max;
+		                min = Math.min.apply(null,data[e])>min?min:Math.min.apply(null,data[e]); chart.min = min;
+		            });
+
+		            let ctx = chart.getContext('2d');
+		            ctx.clearRect(0, 0, chart.width, chart.height);
+		            ctx.lineWidth = config.lineWidth;
+		            let width = chart.width;
+		            let height = chart.height;
+		            let step = width/maxLength; chart.step = step;
+		            let dif = (height*0.6)/(max-min); chart.dif = dif;
+
+		            let listColor = [];
+		            for(let i=0; i<keys.length; i++){
+		                if(typeof data[keys[i]] != 'object'){continue}
+		                let color = config.color[i]==undefined?getColor(config.shade):config.color[i];
+		                listColor.push(color);
+		                let x=step/2;
+		                ctx.beginPath();
+		                ctx.strokeStyle = color;
+		                if (min==max){ctx.moveTo(x,height*0.8)}else{ctx.moveTo(x,height*0.8-(data[keys[i]][0]-min)*dif)};
+		                data[keys[i]].forEach((e)=>{
+		          			if (min==max){ctx.lineTo(x,height*0.8)}else{ctx.lineTo(x,height*0.8-(e-min)*dif);}		       
+		                    x+=step;
+		                });
+		                ctx.stroke();
+
+		                if(config.valueOnChart){
+		                    x = step/2;
+		                    ctx.beginPath();
+		                    ctx.fillStyle = color;
+		                    ctx.font = config.font;
+		                    ctx.textAlign = 'center';
+		                    ctx.textBaseline = 'middle';
+		                    data[keys[i]].forEach((e)=>{
+		                        ctx.fillText(e.toFixed(2), x, height*0.8-(e-min)*dif-20);
+		                        x+=step;
+		                    });
+		                }
+		                
+		                if(config.valueOnAxis){
+		                    ctx.beginPath();
+		                    ctx.fillStyle = color;
+		                    ctx.font = config.font;
+		                    ctx.textAlign = 'center';
+		                    ctx.textBaseline = 'middle';
+		                    data[keys[i]].forEach((e)=>{
+		                        ctx.fillText(e.toFixed(2), step*0.4, height*0.8-(e-min)*dif-20);
+		                    });
+		                }
+		                
+		            }
+
+		            if(config.displayAxis){
+		                ctx.beginPath();
+		                ctx.strokeStyle = 'gray';
+		                ctx.moveTo(step*0.2,height*0.8+step*0.2);
+		                ctx.lineTo(step*0.2,step*0.2);
+		                ctx.moveTo(step*0.2,height*0.8+step*0.2);
+		                ctx.lineTo(width-step*0.2,height*0.8+step*0.2);
+		                ctx.stroke();
+		            }
+
+		            if(config.extremeValueOnAxis){
+		                ctx.beginPath();
+		                ctx.fillStyle = 'gray';
+		                ctx.font = config.font;
+		                ctx.textAlign = 'center';
+		                ctx.textBaseline = 'middle';
+		                ctx.fillText(max.toFixed(2), step*0.4, height*0.8-(max-min)*dif-20);
+		                ctx.fillText(min.toFixed(2), step*0.4, height*0.8);
+		                ctx.stroke();
+		            }
+		        }
+		    }
+		}
+
+		//Консоль
+		function createConsole(parent, style={}){
+		    let cons = document.createElement('div');
+		    cons.setAttribute('class','block-column');
+		    cons.setAttribute('style','background-color: gray; color: white; max-height: 100%; overflow-y: scroll; padding: 5px; border-radius: 10px;');
+		    parent.appendChild(cons);
+
+		    cons.add = (element)=>{cons.appendChild(element)};
+		    cons.write = (text, color='white')=>{
+		        let stroke = document.createElement('p');
+		        stroke.style.color = color;
+		        stroke.style.fontFamily = 'Consolas';
+		        stroke.style.fontSize = '15px';
+		        stroke.style.margin = '2px';
+		        stroke.innerText = text;
+		        cons.appendChild(stroke);
+		    }
+		    cons.clear = ()=>{cons.innerHTML = '';};
+		    Object.keys(style).forEach((s)=>{cons.style[s]=style[s]});
+		    return cons
+		}
+
+		//Получение новости с сервера
+		function getNews(){
+			xhr.open('POST','getNews',[false]);
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			xhr.send(JSON.stringify({file:nameDataSet, position:Number(localStorage[nameDataSet])}));
+			xhr.onload = ()=>{
+				let response = JSON.parse(xhr.response);
+				localStorage[response.file] = response.position;
+				talk.say(response.text);
+				if (response.candels.length>0){
+					let candels = {
+						close:response.candels.map((e)=>{return e.close})
+					};
+					let positionPublic = response.candels.map((e)=>{return e.time}).indexOf(response.date);
+					let mean = candels.close.slice(positionPublic).reduce((sum, i)=>sum+i)/(response.candels.length-positionPublic);
+					let color = candels.close[positionPublic]<mean?'green':candels.close[positionPublic]==undefined?'gray':'red';
+					
+					chartArea.innerHTML = ''; chartArea.style.display = 'block';
+					let chart = drawChart(chartArea, `График акций на <span style='color: #aaaaff;'>${response.date}</span>`, candels, {color:[color],displayAxis:true}, {});
+					chart.label(positionPublic, candels.close[positionPublic], 'Момент публикации новости', 'black');
+				}
+			}
+		}
+
+		var nameDataSet = undefined;
+		let options = document.getElementById('options');
+		let parser = document.getElementById('parser');
+		let talk = document.getElementById('talk');
+		let chartArea = document.getElementById('chartArea');
+		let buttons = document.getElementById('buttons');
+		let messageContinueJob = '';
+		const PHRASES = ['У меня когда-то такое было - ', 'Как-то раз за моей спиной раздалось - ', 'Я больше всего боюсь, что со мной может произойти - ', 'Я стала хорошо спать, после того как ', 'Каждый раз как меня одолевает страх, я наговариваю себе ', 'Мне сегодня снилось, что ', 'Во время экзаменов наш надзиратель любил наговаривать ', 'Я не боюсь выходить ночью на улицу, после того как ', 'Каждый раз, думая о тебе, я вспоминаю, что ', 'Я - Меня мучает диарея \nВрач - ', 'Заходит улитка в бар, а бармен ей - ','Меня не взлюбили преподаватели, после того как я сказала им в лицо - ', 'Смотрела порн... Взрослое кино, там девушка чтобы возбудить мужчину нашёптывала ему - ','О неееет =_=, Как нам теперь жить?! =_= Что нам делать, когда - ', 'Нет, ну ты видешь это? ', 'Топ-1 длинных названий Аниме, например - ', 'Я очень боюсь грозы, и чтобы хоть как-то меня успокоить, моя мама нашёптывала мне - ', 'Мне такое сегодня подружки рассказали, слушай - ', 'ВСЁ! Я собираюсь на СВО, всё из-за того, что ', 'Мой друг любит, когда его девушка делает ему - ', 'Я - Братишка, не будь по жизни пидорасом \nБратишка - ', 'ГОЙДА! Постоим за землю родную, не допустим чтобы ящеры узнали, что ', 'Романенко! Лобанов! Быстро сказали своим пациентам, что ', 'Наш город, это город в котором писали класики - ', 'Вчера хулиганы на нашем заборе написали - ', 'Это что за х**ня у тебя в дневнике? - ', 'Хвала мне, я подготовила доклад на тему - ', 'Официант - Шо будете заказывать? \nЯ - Мне пожалуйста ', 'Е**чая Америка, ты видешь это? - ', 'Эх, заживём! В нышей стране - ', 'Как ты можешь спокойно спать, когда - ','Я узкий! Сегодня '];
+
+		//Проверка на наличие незавершённых файлов
+		for (e of Object.keys(localStorage)){messageContinueJob+=Number(localStorage[e])>0?`${e}, `:''}
+		talk.innerHTML = messageContinueJob.length>0?`Мы с тобой не закончили редактировать файлы <span style='color: green;'>${messageContinueJob}</span>продолжим?`:'Выбирай <span style="color: green;">DataSet</span> и начнём с тобой.';
+
+		//Публикация новости
+		talk.say = (text)=>{
+			text = `<span style='color: gray;'>${PHRASES[Math.floor(Math.random()*PHRASES.length)]}</span>${text}`;
+			talk.style.fontSize = `${36-text.length/14}px`;
+			talk.innerHTML=text
+		}
+
+		//Вёрстка области для настройки парсинга
+		let parserObject = {ticker:undefined, id:undefined, name:undefined, figi:undefined, start: undefined, end: undefined, step: undefined};
+		let Company_ID = input(parser, 'ID компании на сайте Finam', 'input-text-just', {width: '30px'}, '1234567890');
+		Company_ID.function = (value)=>{parserObject.id = Number(value);}
+		let ticker = input(parser, 'Тикер компании', 'input-text-just', {width: '40px'}, ABC='qwertyuiopasdfghjklzxcvbnm1234567890');
+		ticker.function = (value)=>{parserObject.ticker = value;}
+		let name = input(parser, 'Название компании', 'input-text-just', {width: '50px'}, 'QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnmЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮйцукенгшщзхъфывапролджэячсмитьбю_@-+=$#<>1234567890 ');
+		name.function = (value)=>{parserObject.name = value;}
+		let figi = input(parser, 'FIGI компании', _class='input-text-just', style={width: '50px'}, ABC='QWERTYUIOPASDFGHJKLZXCVBNM1234567890');
+		figi.function = (value)=>{parserObject.figi = value;}
+		let start = input(parser, 'С какой новости начать парсить', 'input-text-just', {width: '30px'}, '1234567890');
+		start.function = (value)=>{parserObject.start = Number(value);}
+		let end = input(parser, 'Какой новостью закончить', 'input-text-just', {width: '30px'}, '1234567890');
+		end.function = (value)=>{parserObject.end = Number(value);}
+		let step = input(parser, 'Сколько новостей загружать за раз', 'input-text-just', {width: '30px'}, '1234567890');
+		step.function = (value)=>{parserObject.step = Number(value);}
+		let buttonparserSend = createButton(parser, '', 'Спарсить', ()=>{
+			for (value of Object.values(parserObject)){if(value==undefined){alert('Заполните все поля для парсинга'); return}};
+			buttonparserSend.image.src = 'sync.png';
+			xhr.open('POST','parcing',[false]);
+			xhr.setRequestHeader('Content-Type', 'application/json');
+			xhr.send(JSON.stringify(parserObject));
+			xhr.onload = ()=>{
+				buttonparserSend.image.src = xhr.status==200?'check.png':'cross.png';
+				setTimeout(()=>{buttonparserSend.image.src = 'parsing.png';}, 3500);
+				let response = JSON.parse(xhr.response);
+			}
+		}, 'parsing.png', {width:'30px', height:'30px'}, {})
+
+		//Вёрстка области для выбора файла Новостей
+		let xhr = new XMLHttpRequest();
+		xhr.open('POST','getListDataSets',[false]);
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.send(JSON.stringify({}));
+		xhr.onload = ()=>{
+			let list = []
+			for (i of JSON.parse(xhr.response).list){list.push({name:i})}
+			nameDataSet = list[0].name;
+			selectDataFrame = selectionMenu(options, 'Выберете DataSet для оценки', list, false, {}, {});
+			selectDataFrame.function = (value)=>{nameDataSet = JSON.parse(value).name};
+
+			buttonStart = createButton(options, '', 'Начать подготовку',()=>{
+				if (nameDataSet==undefined){
+					alert('Выберете DataSet');
+				} else {
+					buttonStart.image.src = 'sync.png';
+					localStorage[nameDataSet] = (localStorage[nameDataSet]==undefined)?0:localStorage[nameDataSet];
+					//buttonStart.remove();
+					xhr.open('POST','loadFile',[false]);
+					xhr.setRequestHeader('Content-Type', 'application/json');
+					xhr.send(JSON.stringify({file: nameDataSet}));
+					xhr.onload = ()=>{
+						buttonStart.image.src = xhr.status==200?'check.png':'cross.png';
+						setTimeout(()=>{buttonStart.image.src = 'play.png'}, 3500);
+						getNews();
+					}
+				}
+			}, 'play.png', {width:'30px', height:'30px', marginRight: '5px'}, {});
+
+			buttonSave = createButton(options, '', 'Сохранить файл', ()=>{
+				buttonSave.image.src = 'sync.png';
+				xhr.open('POST','saveFile',[false]);
+				xhr.setRequestHeader('Content-Type', 'application/json');
+				xhr.send(JSON.stringify({file: nameDataSet}));
+				xhr.onload = ()=>{
+					response = JSON.parse(xhr.response);
+					buttonSave.image.src = xhr.status==200?'check.png':'cross.png';
+					setTimeout(()=>{buttonSave.image.src = 'save.png'}, 3500);
+				}
+			}, 'save.png', {width:'30px', height:'30px'}, {})
+		};
+
+		//Вёрстка области для установок Меток для Новостей
+		[{id:-1, text:'<--', color: '#cacaff'}, {id:1, text:'Хорошо', color: 'green'}, {id:0, text:'Безразницы', color: 'gray'}, {id:2, text:'Плохо', color: 'red'}, {id:-2, text:'-->', color: '#cacaff'},].forEach((e)=>{
+			createButton(buttons, e.id, e.text, ()=>{
+				if(e.id>=0){
+					let xhr = new XMLHttpRequest();
+					xhr.open('POST','setNews',[false]);
+					xhr.setRequestHeader('Content-Type', 'application/json');
+					xhr.send(JSON.stringify({file:nameDataSet, position:Number(localStorage[nameDataSet]), y:e.id}));
+					xhr.onload = ()=>{
+						localStorage[nameDataSet]++;
+						getNews();
+					};
+				} else if(e.id==-1 && localStorage[nameDataSet]>0) {
+					localStorage[nameDataSet]--;
+					getNews();
+				} else if(e.id==-2) {
+					localStorage[nameDataSet]++;
+					getNews();
+				}
+			}, undefined, {width:'30px', height:'30px'}, style={borderColor: e.color, color: e.color})
+		})
+		
+	</script>
+</body>
+</html>
