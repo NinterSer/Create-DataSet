@@ -1,0 +1,11 @@
+simplejson==3.20.1
+requests==2.32.3
+bs4==0.0.2
+pandas==2.3.0
+datetime==5.5
+sockets==1.0.0
+tinkoff==0.1.1
+tinkoff-investments==0.2.0b109
+email==4.0.2
+urllib3==2.3.0
+
